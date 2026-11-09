@@ -16,11 +16,18 @@
  * @fileoverview Unit tests for SpeechSynthesisChunkerService.
  */
 
-// @ts-nocheck
-
 import {TestBed, fakeAsync, flush} from '@angular/core/testing';
 
 import {SpeechSynthesisChunkerService} from 'services/speech-synthesis-chunker.service';
+
+// A plain-object stand-in for the SpeechSynthesisUtterance objects that the
+// service creates for each chunk. Its addEventListener() stores the listener
+// as onend, so the fake speechSynthesis.speak() in these tests can end a chunk
+// by calling onend.
+interface MockSpeechSynthesisUtterance
+  extends Partial<SpeechSynthesisUtterance> {
+  speak: () => void;
+}
 
 describe('Speech Synthesis Chunker Service', () => {
   let speechSynthesisChunkerService: SpeechSynthesisChunkerService;
@@ -153,18 +160,24 @@ describe('Speech Synthesis Chunker Service', () => {
 
   describe('speak', function () {
     const MockSpeechSynthesisUtteranceConstructor = SpeechSynthesisUtterance;
-    const mockSpeechSynthesisUtteran = {
+    const mockSpeechSynthesisUtteran: MockSpeechSynthesisUtterance = {
       speak: () => {},
       onend: () => {},
-      addEventListener: function (_: string, cb: () => void) {
+      addEventListener: function (_: string, cb: EventListener) {
         this.onend = cb;
       },
     };
 
+    // The spy replaces the SpeechSynthesisUtterance constructor, so its return
+    // values have that type. Each copy of the mock only has the members that
+    // the service and these tests use.
+    const createMockUtterance = (): SpeechSynthesisUtterance =>
+      Object.assign({}, mockSpeechSynthesisUtteran) as SpeechSynthesisUtterance;
+
     beforeEach(() => {
       spyOn(window, 'SpeechSynthesisUtterance').and.returnValues(
-        Object.assign({}, mockSpeechSynthesisUtteran),
-        Object.assign({}, mockSpeechSynthesisUtteran)
+        createMockUtterance(),
+        createMockUtterance()
       );
     });
 

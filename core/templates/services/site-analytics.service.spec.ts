@@ -16,14 +16,13 @@
  * @fileoverview Unit tests for SiteAnalyticsService.
  */
 
-// @ts-nocheck
-
 import {fakeAsync, flushMicrotasks, TestBed} from '@angular/core/testing';
 import {DOCUMENT} from '@angular/common';
 import {SiteAnalyticsService} from 'services/site-analytics.service';
 import {WindowRef} from 'services/contextual/window-ref.service';
 import {LocalStorageService} from 'services/local-storage.service';
 import {UserService} from 'services/user.service';
+import {UserInfo} from 'domain/user/user-info.model';
 import {NavbarAndFooterGATrackingPages} from 'app.constants';
 
 describe('Site Analytics Service', () => {
@@ -700,8 +699,10 @@ describe('Site Analytics Service', () => {
 
     it('should wait for user info before sending event if login state is unresolved', fakeAsync(() => {
       let resolveUserInfoPromise!: () => void;
-      const userInfoPromise = new Promise<void>(resolve => {
-        resolveUserInfoPromise = resolve;
+      const userInfoPromise = new Promise<UserInfo>(resolve => {
+        // The service ignores the resolved user info. It only waits for the
+        // promise to settle before it sends the event.
+        resolveUserInfoPromise = () => resolve(UserInfo.createDefault());
       });
 
       userService.getUserInfoAsync.and.returnValue(userInfoPromise);
@@ -710,7 +711,8 @@ describe('Site Analytics Service', () => {
       const delayedInitSas = new SiteAnalyticsService(
         ws,
         localStorageService,
-        userService
+        userService,
+        document
       );
 
       delayedInitSas.registerCommunityLessonStarted(explorationId);
